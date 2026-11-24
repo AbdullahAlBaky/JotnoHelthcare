@@ -1,0 +1,10 @@
+<?php
+namespace App\Http\Controllers\Api;
+use App\Http\Controllers\Controller; use App\Models\Patient; use App\Models\User; use Illuminate\Http\Request;
+class PatientController extends Controller {
+ public function index(Request $r){$q=Patient::with('user')->latest(); if($r->user()->role==='patient')$q->where('user_id',$r->user()->id); elseif($r->user()->role==='caregiver')$q->whereIn('id',\App\Models\CaregiverAccess::where('caregiver_id',$r->user()->id)->where('status','approved')->pluck('patient_id')); elseif(!in_array($r->user()->role,['admin','doctor','specialist'])) return response()->json(['data'=>[],'total'=>0]); return $q->paginate(15);}
+ public function store(Request $r){$d=$r->validate(['name'=>'required|string|max:120','email'=>'required|email|unique:users,email','date_of_birth'=>'nullable|date','sex'=>'nullable|string|max:30','address'=>'nullable|string','emergency_contact'=>'nullable|string','medical_history'=>'nullable|string','allergies'=>'nullable|string']); $u=User::create(['name'=>$d['name'],'email'=>$d['email'],'password'=>bcrypt(str()->random(20)),'role'=>'patient']); $p=$u->patientProfile()->create(collect($d)->except(['name','email'])->all()); return response()->json($p->load('user'),201);}
+ public function show(Request $r,Patient $patient){$this->authorizePatient($r,$patient);return $patient->load(['user','observations','assessments','reports','carePlans']);}
+ public function update(Request $r,Patient $patient){abort_unless($r->user()->role!=='caregiver',403);$this->authorizePatient($r,$patient);$d=$r->validate(['date_of_birth'=>'nullable|date','sex'=>'nullable|string','address'=>'nullable|string','emergency_contact'=>'nullable|string','medical_history'=>'nullable|string','allergies'=>'nullable|string']);$patient->update($d);return $patient->fresh('user');}
+ private function authorizePatient($r,$p){abort_unless($r->user()->role==='admin'||$r->user()->id===$p->user_id||in_array($r->user()->role,['doctor','specialist'])||($r->user()->role==='caregiver'&&\App\Models\CaregiverAccess::where('patient_id',$p->id)->where('caregiver_id',$r->user()->id)->where('status','approved')->exists()),403);}
+}

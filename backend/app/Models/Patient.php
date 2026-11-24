@@ -1,0 +1,4 @@
+<?php
+namespace App\Models;
+use Illuminate\Database\Eloquent\Model;
+class Patient extends Model { protected $fillable=['user_id','date_of_birth','sex','address','emergency_contact','medical_history','allergies']; protected $casts=['date_of_birth'=>'date']; public function user(){return $this->belongsTo(User::class);} public function observations(){return $this->hasMany(Observation::class);} public function assessments(){return $this->hasMany(Assessment::class);} public function reports(){return $this->hasMany(MedicalReport::class);} public function carePlans(){return $this->hasMany(CarePlan::class);} public function admissionRequests(){return $this->hasMany(AdmissionRequest::class);} public function caregivers(){return $this->hasMany(CaregiverAccess::class);} public function consultations(){return $this->hasMany(Consultation::class);} public function referrals(){return $this->hasMany(Referral::class);} }
